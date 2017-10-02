@@ -4,9 +4,7 @@
 use std::cmp::min;
 use std::ops::{Add, Div, Mul, Neg, Sub};
 
-use ::{Datelike, DateTime, Duration as OldDuration, NaiveDate, NaiveDateTime, TimeZone};
-
-use super::last_day_of_month_0;
+use ::{Datelike, DateTime, Duration as OldDuration, NaiveDate, NaiveDateTime, TimeZone, last_day_of_month_0};
 
 /// A `Duration` type that is aware of months and years.
 ///

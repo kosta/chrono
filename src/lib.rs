@@ -443,6 +443,7 @@ pub mod naive {
 mod date;
 mod datetime;
 pub mod format;
+pub mod calendar_duration;
 pub mod date_iterator;
 
 /// Serialization/Deserialization in alternate formats
@@ -623,6 +624,24 @@ impl num::traits::FromPrimitive for Weekday {
             _ => None,
         }
     }
+}
+
+/// return whether the given year is a leap year
+pub fn is_leap_year(year: i32) -> bool {
+    NaiveDate::from_ymd_opt(year, 2, 29).is_some()
+}
+
+/// return the last day of a given month/year, where month is zero-based (January = 0, February = 1, etc)
+pub fn last_day_of_month_0(year: i32, month_0: u32) -> u32 {
+    last_day_of_month(year, month_0 + 1)
+}
+
+/// return the last day of a given month/year, where month is one-based (January = 1, February = 2, etc)
+pub fn last_day_of_month(year: i32, month: u32) -> u32 {
+    NaiveDate::from_ymd_opt(year, month + 1, 1)
+        .unwrap_or_else(|| NaiveDate::from_ymd(year + 1, 1, 1))
+        .pred()
+        .day()
 }
 
 use std::fmt;
