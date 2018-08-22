@@ -224,6 +224,7 @@ impl<Tz: TimeZone> Date<Tz> {
     ///
     /// This does not overflow or underflow at all,
     /// as all possible output fits in the range of `Duration`.
+    #[cfg_attr(feature = "cargo-clippy", allow(needless_pass_by_value))]
     #[inline]
     pub fn signed_duration_since<Tz2: TimeZone>(self, rhs: Date<Tz2>) -> OldDuration {
         self.date.signed_duration_since(rhs.date)
@@ -356,6 +357,15 @@ impl<Tz: TimeZone> Sub<OldDuration> for Date<Tz> {
     #[inline]
     fn sub(self, rhs: OldDuration) -> Date<Tz> {
         self.checked_sub_signed(rhs).expect("`Date - Duration` overflowed")
+    }
+}
+
+impl<Tz: TimeZone> Sub<Date<Tz>> for Date<Tz> {
+    type Output = OldDuration;
+
+    #[inline]
+    fn sub(self, rhs: Date<Tz>) -> OldDuration {
+        self.signed_duration_since(rhs)
     }
 }
 

@@ -8,10 +8,72 @@ Chrono obeys the principle of [Semantic Versioning](http://semver.org/).
 There were/are numerous minor versions before 1.0 due to the language changes.
 Versions with only mechnical changes will be omitted from the following list.
 
+## 0.4.5
+
+### Features
+
+* Added several more serde deserialization helpers (@novacrazy #258)
+* Enabled all features on the playground (@davidtwco #267)
+* Derive `Hash` on `FixedOffset` (@LuoZijun #254)
+* Improved docs (@storyfeet #261, @quodlibetor #252)
+
+## 0.4.4
+
+### Features
+
+* Added support for parsing nanoseconds without the leading dot (@emschwartz #251)
+
+## 0.4.3
+
+### Features
+
+* Added methods to DateTime/NaiveDateTime to present the stored value as a number
+  of nanoseconds since the UNIX epoch (@harkonenbade #247)
+* Added a serde serialise/deserialise module for nanosecond timestamps. (@harkonenbade #247)
+* Added "Permissive" timezone parsing which allows a numeric timezone to
+  be specified without minutes. (@quodlibetor #242)
+
+## 0.4.2
+
+### Deprecations
+
+* More strongly deprecate RustcSerialize: remove it from documentation unless
+  the feature is enabled, issue a deprecation warning if the rustc-serialize
+  feature is enabled (@quodlibetor #174)
+
+### Features
+
+* Move all uses of the system clock behind a `clock` feature, for use in
+  environments where we don't have access to the current time. (@jethrogb #236)
+* Implement subtraction of two `Date`s, `Time`s, or `DateTime`s, returning a
+  `Duration` (@tobz1000 #237)
+
+## 0.4.1
+
+### Bug Fixes
+
+* Allow parsing timestamps with subsecond precision (@jonasbb)
+* RFC2822 allows times to not include the second (@upsuper)
+
+### Features
+
+* New `timestamp_millis` method on `DateTime` and `NaiveDateTim` that returns
+  number of milliseconds since the epoch. (@quodlibetor)
+* Support exact decimal width on subsecond display for RFC3339 via a new
+  `to_rfc3339_opts` method on `DateTime` (@dekellum)
+* Use no_std-compatible num dependencies (@cuviper)
+* Add `SubsecRound` trait that allows rounding to the nearest second
+  (@dekellum)
+
+### Code Hygiene and Docs
+
+* Docs! (@alatiera @kosta @quodlibetor @kennytm)
+* Run clippy and various fixes (@quodlibetor)
+
 ## 0.4.0 (2017-06-22)
 
-This was originally planned as a minor release but was pushed to a major release
-due to the compatibility concern raised.
+This was originally planned as a minor release but was pushed to a major
+release due to the compatibility concern raised.
 
 ### Added
 

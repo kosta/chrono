@@ -1,10 +1,11 @@
-[Chrono][docsrs] 0.4.0
-======================
+[Chrono][docsrs]: Date and Time for Rust
+========================================
 
 [![Chrono on Travis CI][travis-image]][travis]
 [![Chrono on Appveyor][appveyor-image]][appveyor]
 [![Chrono on crates.io][cratesio-image]][cratesio]
 [![Chrono on docs.rs][docsrs-image]][docsrs]
+[![Join the chat at https://gitter.im/chrono-rs/chrono][gitter-image]][gitter]
 
 [travis-image]: https://travis-ci.org/chronotope/chrono.svg?branch=master
 [travis]: https://travis-ci.org/chronotope/chrono
@@ -12,9 +13,10 @@
 [appveyor]: https://ci.appveyor.com/project/chronotope/chrono
 [cratesio-image]: https://img.shields.io/crates/v/chrono.svg
 [cratesio]: https://crates.io/crates/chrono
-[docsrs-image]: https://docs.rs/chrono/badge.svg?version=0.4.0
-[docsrs]: https://docs.rs/chrono/0.4.0/
-
+[docsrs-image]: https://docs.rs/chrono/badge.svg
+[docsrs]: https://docs.rs/chrono
+[gitter-image]: https://badges.gitter.im/chrono-rs/chrono.svg
+[gitter]: https://gitter.im/chrono-rs/chrono?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge
 
 Date and time handling for Rust.
 It aims to be a feature-complete superset of
@@ -46,20 +48,13 @@ Put this in your `Cargo.toml`:
 chrono = "0.4"
 ```
 
-Or, if you want [Serde](https://github.com/serde-rs/serde) or
-[rustc-serialize](https://github.com/rust-lang-nursery/rustc-serialize) support,
-include the features like this:
+Or, if you want [Serde](https://github.com/serde-rs/serde) include the feature
+like this:
 
 ```toml
 [dependencies]
-chrono = { version = "0.4", features = ["serde", "rustc-serialize"] }
+chrono = { version = "0.4", features = ["serde"] }
 ```
-
-> Note that Chrono's support for rustc-serialize is now considered deprecated.
-Starting from 0.4.0 there is no further guarantee that
-the features available in Serde will be also available to rustc-serialize,
-and the support can be removed in any future major version.
-**Rustc-serialize users are strongly recommended to migrate to Serde.**
 
 Then put this in your crate root:
 
@@ -79,7 +74,7 @@ use chrono::prelude::*;
 ### Duration
 
 Chrono currently uses
-the [`time::Duration`](https://doc.rust-lang.org/time/time/struct.Duration.html) type
+the [`time::Duration`](https://docs.rs/time/0.1.40/time/struct.Duration.html) type
 from the `time` crate to represent the magnitude of a time span.
 Since this has the same name to the newer, standard type for duration,
 the reference will refer this type as `OldDuration`.
@@ -91,9 +86,9 @@ Chrono does not yet natively support
 the standard [`Duration`](https://doc.rust-lang.org/std/time/struct.Duration.html) type,
 but it will be supported in the future.
 Meanwhile you can convert between two types with
-[`Duration::from_std`](https://doc.rust-lang.org/time/time/struct.Duration.html#method.from_std)
+[`Duration::from_std`](https://docs.rs/time/0.1.40/time/struct.Duration.html#method.from_std)
 and
-[`Duration::to_std`](https://doc.rust-lang.org/time/time/struct.Duration.html#method.to_std)
+[`Duration::to_std`](https://docs.rs/time/0.1.40/time/struct.Duration.html#method.to_std)
 methods.
 
 ### Date and Time
@@ -236,6 +231,10 @@ assert_eq!(dt.to_string(), "2014-11-28 12:00:09 UTC");
 assert_eq!(dt.to_rfc2822(), "Fri, 28 Nov 2014 12:00:09 +0000");
 assert_eq!(dt.to_rfc3339(), "2014-11-28T12:00:09+00:00");
 assert_eq!(format!("{:?}", dt), "2014-11-28T12:00:09Z");
+
+let now = Utc::now();
+// Will display today's date with nanoseconds
+println!("{:?}", now); // 2018-1-24T12:00:00.000000000Z
 ```
 
 Parsing can be done with three methods:

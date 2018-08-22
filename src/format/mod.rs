@@ -52,7 +52,7 @@ pub enum Pad {
 /// If the number is too long or (in some cases) negative, it is printed as is.
 ///
 /// The **parsing width** is the maximal width to be scanned.
-/// The parser only tries to consume from one to given number of digits (greedily). 
+/// The parser only tries to consume from one to given number of digits (greedily).
 /// It also trims the preceding whitespaces if any.
 /// It cannot parse the negative number, so some date and time cannot be formatted then
 /// parsed with the same formatting items.
@@ -213,29 +213,28 @@ pub enum Fixed {
 }
 
 /// An opaque type representing fixed-format item types for internal uses only.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InternalFixed {
-    _dummy: Void,
+    val: InternalInternal,
 }
 
-impl Clone for InternalFixed {
-    fn clone(&self) -> Self {
-        match self._dummy {}
-    }
-}
-
-impl PartialEq for InternalFixed {
-    fn eq(&self, _other: &InternalFixed) -> bool {
-        match self._dummy {}
-    }
-}
-
-impl Eq for InternalFixed {
-}
-
-impl fmt::Debug for InternalFixed {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "<InternalFixed>")
-    }
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum InternalInternal {
+    /// Same as [`TimezoneOffsetColonZ`](#variant.TimezoneOffsetColonZ), but
+    /// allows missing minutes (per [ISO 8601][iso8601]).
+    ///
+    /// # Panics
+    ///
+    /// If you try to use this for printing.
+    ///
+    /// [iso8601]: https://en.wikipedia.org/wiki/ISO_8601#Time_offsets_from_UTC
+    TimezoneOffsetPermissive,
+    /// Same to [`Nanosecond`](#variant.Nanosecond) but the accuracy is fixed to 3 and there is no leading dot.
+    Nanosecond3NoDot,
+    /// Same to [`Nanosecond`](#variant.Nanosecond) but the accuracy is fixed to 6 and there is no leading dot.
+    Nanosecond6NoDot,
+    /// Same to [`Nanosecond`](#variant.Nanosecond) but the accuracy is fixed to 9 and there is no leading dot.
+    Nanosecond9NoDot,
 }
 
 /// A single formatting item. This is used for both formatting and parsing.
@@ -264,6 +263,7 @@ macro_rules! num  { ($x:ident) => (Item::Numeric(Numeric::$x, Pad::None)) }
 macro_rules! num0 { ($x:ident) => (Item::Numeric(Numeric::$x, Pad::Zero)) }
 macro_rules! nums { ($x:ident) => (Item::Numeric(Numeric::$x, Pad::Space)) }
 macro_rules! fix  { ($x:ident) => (Item::Fixed(Fixed::$x)) }
+macro_rules! internal_fix { ($x:ident) => (Item::Fixed(Fixed::Internal(InternalFixed { val: InternalInternal::$x })))}
 
 /// An error from the `parse` function.
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]
@@ -362,26 +362,30 @@ pub fn format<'a, I>(w: &mut fmt::Formatter, date: Option<&NaiveDate>, time: Opt
                     (d.ordinal() as i32 - d.weekday().num_days_from_monday() as i32 + 7) / 7;
 
                 let (width, v) = match spec {
-                    Year           => (4, date.map(|d| d.year() as i64)),
-                    YearDiv100     => (2, date.map(|d| div_floor(d.year() as i64, 100))),
-                    YearMod100     => (2, date.map(|d| mod_floor(d.year() as i64, 100))),
-                    IsoYear        => (4, date.map(|d| d.iso_week().year() as i64)),
-                    IsoYearDiv100  => (2, date.map(|d| div_floor(d.iso_week().year() as i64, 100))),
-                    IsoYearMod100  => (2, date.map(|d| mod_floor(d.iso_week().year() as i64, 100))),
-                    Month          => (2, date.map(|d| d.month() as i64)),
-                    Day            => (2, date.map(|d| d.day() as i64)),
-                    WeekFromSun    => (2, date.map(|d| week_from_sun(d) as i64)),
-                    WeekFromMon    => (2, date.map(|d| week_from_mon(d) as i64)),
-                    IsoWeek        => (2, date.map(|d| d.iso_week().week() as i64)),
-                    NumDaysFromSun => (1, date.map(|d| d.weekday().num_days_from_sunday() as i64)),
-                    WeekdayFromMon => (1, date.map(|d| d.weekday().number_from_monday() as i64)),
-                    Ordinal        => (3, date.map(|d| d.ordinal() as i64)),
-                    Hour           => (2, time.map(|t| t.hour() as i64)),
-                    Hour12         => (2, time.map(|t| t.hour12().1 as i64)),
-                    Minute         => (2, time.map(|t| t.minute() as i64)),
-                    Second         => (2, time.map(|t| (t.second() +
-                                                        t.nanosecond() / 1_000_000_000) as i64)),
-                    Nanosecond     => (9, time.map(|t| (t.nanosecond() % 1_000_000_000) as i64)),
+                    Year           => (4, date.map(|d| i64::from(d.year()))),
+                    YearDiv100     => (2, date.map(|d| div_floor(i64::from(d.year()), 100))),
+                    YearMod100     => (2, date.map(|d| mod_floor(i64::from(d.year()), 100))),
+                    IsoYear        => (4, date.map(|d| i64::from(d.iso_week().year()))),
+                    IsoYearDiv100  => (2, date.map(|d| div_floor(
+                        i64::from(d.iso_week().year()), 100))),
+                    IsoYearMod100  => (2, date.map(|d| mod_floor(
+                        i64::from(d.iso_week().year()), 100))),
+                    Month          => (2, date.map(|d| i64::from(d.month()))),
+                    Day            => (2, date.map(|d| i64::from(d.day()))),
+                    WeekFromSun    => (2, date.map(|d| i64::from(week_from_sun(d)))),
+                    WeekFromMon    => (2, date.map(|d| i64::from(week_from_mon(d)))),
+                    IsoWeek        => (2, date.map(|d| i64::from(d.iso_week().week()))),
+                    NumDaysFromSun => (1, date.map(|d| i64::from(d.weekday()
+                                                                  .num_days_from_sunday()))),
+                    WeekdayFromMon => (1, date.map(|d| i64::from(d.weekday()
+                                                                  .number_from_monday()))),
+                    Ordinal        => (3, date.map(|d| i64::from(d.ordinal()))),
+                    Hour           => (2, time.map(|t| i64::from(t.hour()))),
+                    Hour12         => (2, time.map(|t| i64::from(t.hour12().1))),
+                    Minute         => (2, time.map(|t| i64::from(t.minute()))),
+                    Second         => (2, time.map(|t| i64::from(t.second() +
+                                                        t.nanosecond() / 1_000_000_000))),
+                    Nanosecond     => (9, time.map(|t| i64::from(t.nanosecond() % 1_000_000_000))),
                     Timestamp      => (1, match (date, time, off) {
                         (Some(d), Some(t), None) =>
                             Some(d.and_time(*t).timestamp()),
@@ -395,7 +399,7 @@ pub fn format<'a, I>(w: &mut fmt::Formatter, date: Option<&NaiveDate>, time: Opt
                 };
 
                 if let Some(v) = v {
-                    if (spec == Year || spec == IsoYear) && !(0 <= v && v < 10000) {
+                    if (spec == Year || spec == IsoYear) && !(0 <= v && v < 10_000) {
                         // non-four-digit years require an explicit sign as per ISO 8601
                         match pad {
                             Pad::None => try!(write!(w, "{:+}", v)),
@@ -477,6 +481,21 @@ pub fn format<'a, I>(w: &mut fmt::Formatter, date: Option<&NaiveDate>, time: Opt
                             let nano = t.nanosecond() % 1_000_000_000;
                             write!(w, ".{:09}", nano)
                         }),
+                    Internal(InternalFixed { val: InternalInternal::Nanosecond3NoDot }) =>
+                        time.map(|t| {
+                            let nano = t.nanosecond() % 1_000_000_000;
+                            write!(w, "{:03}", nano / 1_000_000)
+                        }),
+                    Internal(InternalFixed { val: InternalInternal::Nanosecond6NoDot }) =>
+                        time.map(|t| {
+                            let nano = t.nanosecond() % 1_000_000_000;
+                            write!(w, "{:06}", nano / 1_000)
+                        }),
+                    Internal(InternalFixed { val: InternalInternal::Nanosecond9NoDot }) =>
+                        time.map(|t| {
+                            let nano = t.nanosecond() % 1_000_000_000;
+                            write!(w, "{:09}", nano)
+                        }),
                     TimezoneName =>
                         off.map(|&(ref name, _)| write!(w, "{}", *name)),
                     TimezoneOffsetColon =>
@@ -487,6 +506,8 @@ pub fn format<'a, I>(w: &mut fmt::Formatter, date: Option<&NaiveDate>, time: Opt
                         off.map(|&(_, off)| write_local_minus_utc(w, off, false, false)),
                     TimezoneOffsetZ =>
                         off.map(|&(_, off)| write_local_minus_utc(w, off, true, false)),
+                    Internal(InternalFixed { val: InternalInternal::TimezoneOffsetPermissive }) =>
+                        panic!("Do not try to write %#z it is undefined"),
                     RFC2822 => // same to `%a, %e %b %Y %H:%M:%S %z`
                         if let (Some(d), Some(t), Some(&(_, off))) = (date, time, off) {
                             let sec = t.second() + t.nanosecond() / 1_000_000_000;
@@ -507,9 +528,6 @@ pub fn format<'a, I>(w: &mut fmt::Formatter, date: Option<&NaiveDate>, time: Opt
                         } else {
                             None
                         },
-
-                    // for the future expansion
-                    Internal(ref int) => match int._dummy {},
                 };
 
                 match ret {
@@ -605,4 +623,3 @@ impl FromStr for Weekday {
         }
     }
 }
-
