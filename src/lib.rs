@@ -493,7 +493,7 @@ mod date;
 mod datetime;
 pub mod format;
 mod round;
-pub mod calendar_duration;
+pub mod date_ops;
 pub mod date_iterator;
 
 /// Serialization/Deserialization in alternate formats
@@ -903,6 +903,16 @@ pub trait Datelike: Sized {
     ///
     /// Returns `None` when the resulting value would be invalid.
     fn with_ordinal0(&self, ordinal0: u32) -> Option<Self>;
+
+    /// Adds given Duration to the current Datelike.
+    /// (Only adds the "day" part of Duration if the Datelike cannot represent time)
+    ///
+    /// Returns None when it will result in overflow.
+    ///
+    /// Leap seconds are handled in the same way as check_add_signed for then various
+    /// implementors of Datelike
+    // TODO: Name this OldDuration?
+    fn checked_add(self, rhs: Duration) -> Option<Self>;
 
     /// Returns the number of days since January 1, Year 1 (aka Day 1) in the
     /// proleptic Gregorian calendar.

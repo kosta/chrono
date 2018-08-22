@@ -315,6 +315,10 @@ impl<Tz: TimeZone> Datelike for Date<Tz> {
     fn with_ordinal0(&self, ordinal0: u32) -> Option<Date<Tz>> {
         map_local(self, |date| date.with_ordinal0(ordinal0))
     }
+
+    fn checked_add(self, rhs: OldDuration) -> Option<Self> {
+        self.checked_add_signed(rhs)
+    }
 }
 
 // we need them as automatic impls cannot handle associated types

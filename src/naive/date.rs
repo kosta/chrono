@@ -1300,6 +1300,10 @@ impl Datelike for NaiveDate {
     fn with_ordinal0(&self, ordinal0: u32) -> Option<NaiveDate> {
         self.with_of(self.of().with_ordinal(ordinal0 + 1))
     }
+
+    fn checked_add(self, rhs: OldDuration) -> Option<Self> {
+        self.checked_add_signed(rhs)
+    }
 }
 
 /// An addition of `Duration` to `NaiveDate` discards the fractional days,

@@ -993,6 +993,10 @@ impl Datelike for NaiveDateTime {
     fn with_ordinal0(&self, ordinal0: u32) -> Option<NaiveDateTime> {
         self.date.with_ordinal0(ordinal0).map(|d| NaiveDateTime { date: d, ..*self })
     }
+
+    fn checked_add(self, rhs: OldDuration) -> Option<Self> {
+        self.checked_add_signed(rhs)
+    }
 }
 
 impl Timelike for NaiveDateTime {

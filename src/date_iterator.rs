@@ -1,29 +1,25 @@
 //! Exposes date iterators that can be used to express "start at time X and every hour afterwards"
 
-use ::{DateTime, TimeZone};
-
-use super::calendar_duration::{CalendarDuration, checked_add};
+use Datelike;
+use date_ops::DateOp;
 
 /// Iterator as returned by `date_iterator_from`
-///
-/// TODO: How to make this generic over Datelike or similar?
 #[derive(Debug)]
-pub struct OpenEndedDateIterator<Tz: TimeZone> {
-    from: DateTime<Tz>,
-    duration: CalendarDuration,
+pub struct OpenEndedDateIterator<Op: DateOp<T>, T: Datelike + Clone> {
+    from: T,
+    duration: Op,
     iterations: i32,
 }
 
-impl<Tz: TimeZone> OpenEndedDateIterator<Tz> {
+impl<Op: DateOp<T>, T: Datelike + Clone> OpenEndedDateIterator<Op, T> {
     /// return a new DateIterator that stops iteration when `to` is reached (`to` is not included)
-    pub fn to(self, to: DateTime<Tz>) -> ClosedDateIterator<Tz, Self> {
+    pub fn to(self, to: T) -> ClosedDateIterator<T, Self> {
         date_iterator_to(self, to)
     }
 
     /// needed here so that pairwise can work
-    fn current(&self) -> Option<DateTime<Tz>> {
-        //TODO: The multiplication should be checked_mul as well but we'll wait for a better `Duration` type for that...
-        checked_add(&self.from, &(&self.duration * self.iterations))
+    fn current(&self) -> Option<T> {
+        self.duration.times(self.iterations)?.add_to(&self.from.clone())
     }
 
     /// returns a pairwise iterator of (next, after_next) dates. This is if you use the date iterator to
@@ -35,7 +31,7 @@ impl<Tz: TimeZone> OpenEndedDateIterator<Tz> {
     /// (Feb 28th, March 30th), (March 30th, April 31st), etc. This is different from if you simply used a
     /// date iterator (which would yield January 31st, Feb 28th, March 30th) and construct pairs by adding one
     /// month, which leads to errorneous (Feb 28th, March 28th) on the second iteration.
-    pub fn pairwise(self) -> OpenEndedPairwiseDateIterator<Tz> {
+    pub fn pairwise(self) -> OpenEndedPairwiseDateIterator<Op, T> {
         OpenEndedPairwiseDateIterator { iter: self }
     }
 }
@@ -44,25 +40,25 @@ impl<Tz: TimeZone> OpenEndedDateIterator<Tz> {
 ///
 /// [`OpenEndedDateIterator::pairwise()`]: struct.OpenEndedDateIterator.html#method.pairwise
 #[derive(Debug)]
-pub struct OpenEndedPairwiseDateIterator<Tz: TimeZone> {
-    iter: OpenEndedDateIterator<Tz>,
+pub struct OpenEndedPairwiseDateIterator<Op: DateOp<T>, T: Datelike + Clone> {
+    iter: OpenEndedDateIterator<Op, T>,
 }
 
 /// Iterator that yields dates that until the given `to` date. (All dates are smaller than `to`).
 /// TODO: Find a better name :)
 /// TODO: Once impl Trait is stable, get rid of this struct and use `iterator.take_while()`
 #[derive(Debug)]
-pub struct ClosedDateIterator<Tz: TimeZone, Iter: Iterator<Item = DateTime<Tz>>> {
+pub struct ClosedDateIterator<T: Datelike, Iter: Iterator<Item = T>> {
     iter: Iter,
-    to: DateTime<Tz>,
+    to: T,
 }
 
-impl<Tz: TimeZone> ClosedDateIterator<Tz, OpenEndedDateIterator<Tz>> {
+impl<Op: DateOp<T>, T: Datelike + Clone> ClosedDateIterator<T, OpenEndedDateIterator<Op, T>> {
 
     /// see comment on [`OpenEndedDateIterator::pairwise()`]
     ///
     ///[`OpenEndedDateIterator::pairwise()`]: struct.OpenEndedDateIterator.html#method.pairwise
-    pub fn pairwise(self) -> ClosedPairwiseDateIterator<Tz> {
+    pub fn pairwise(self) -> ClosedPairwiseDateIterator<Op, T> {
         ClosedPairwiseDateIterator {
             iter: self.iter.pairwise(),
             to: self.to,
@@ -75,44 +71,42 @@ impl<Tz: TimeZone> ClosedDateIterator<Tz, OpenEndedDateIterator<Tz>> {
 ///[`ClosedDateIterator::pairwise()`]: struct.ClosedDateIterator.html#method.pairwise
 ///[`OpenEndedDateIterator::pairwise()`]: struct.OpenEndedDateIterator.html#method.pairwise
 #[derive(Debug)]
-pub struct ClosedPairwiseDateIterator<Tz: TimeZone> {
-    iter: OpenEndedPairwiseDateIterator<Tz>,
-    to: DateTime<Tz>,
+pub struct ClosedPairwiseDateIterator<Op: DateOp<T>, T: Datelike + Clone> {
+    iter: OpenEndedPairwiseDateIterator<Op, T>,
+    to: T,
 }
 
 /// returns an open ended `Iterator`, that will first yield `dt`
-///
-/// TODO: How to make this generic over Datelike?
-pub fn date_iterator_from<Tz: TimeZone, D: Into<CalendarDuration>>(dt: DateTime<Tz>,
-                                                                   duration: D)
-                                                                   -> OpenEndedDateIterator<Tz> {
+pub fn date_iterator_from<Op: DateOp<T>, T: Datelike + Clone>(dt: T,
+                                                      duration: Op)
+                                                      -> OpenEndedDateIterator<Op, T> {
     OpenEndedDateIterator {
         from: dt,
-        duration: duration.into(),
+        duration: duration,
         iterations: 0,
     }
 }
 
 /// return a new DateIterator that stops iteration when `to` is reached (`to` is not included)
-pub fn date_iterator_to<Tz: TimeZone, Iter: Iterator<Item = DateTime<Tz>>>
+pub fn date_iterator_to<T: Datelike, Iter: Iterator<Item = T>>
     (iter: Iter,
-     to: DateTime<Tz>)
-     -> ClosedDateIterator<Tz, Iter> {
+     to: T)
+     -> ClosedDateIterator<T, Iter> {
     ClosedDateIterator { iter: iter, to: to }
 }
 
 /// return a new DateIterator that starts at `from` and yields results for every added duration until `to` is reached (`to` is not included)
-pub fn date_iterator_from_to<Tz: TimeZone, D: Into<CalendarDuration>>
-    (from: DateTime<Tz>,
-     duration: D,
-     to: DateTime<Tz>)
-     -> ClosedDateIterator<Tz, OpenEndedDateIterator<Tz>> {
+pub fn date_iterator_from_to<T: Datelike + Clone, Op: DateOp<T>>
+    (from: T,
+     duration: Op,
+     to: T)
+     -> ClosedDateIterator<T, OpenEndedDateIterator<Op, T>> {
 
     date_iterator_from(from, duration).to(to)
 }
 
-impl<Tz: TimeZone> Iterator for OpenEndedDateIterator<Tz> {
-    type Item = DateTime<Tz>;
+impl<Op: DateOp<T>, T: Datelike + Clone> Iterator for OpenEndedDateIterator<Op, T> {
+    type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
         let next = self.current();
@@ -121,8 +115,8 @@ impl<Tz: TimeZone> Iterator for OpenEndedDateIterator<Tz> {
     }
 }
 
-impl<Tz: TimeZone> Iterator for OpenEndedPairwiseDateIterator<Tz> {
-    type Item = (DateTime<Tz>, DateTime<Tz>);
+impl<Op: DateOp<T>, T: Datelike + Clone> Iterator for OpenEndedPairwiseDateIterator<Op, T> {
+    type Item = (T, T);
 
     fn next(&mut self) -> Option<Self::Item> {
         self.iter
@@ -131,22 +125,23 @@ impl<Tz: TimeZone> Iterator for OpenEndedPairwiseDateIterator<Tz> {
     }
 }
 
-impl<Tz: TimeZone, Iter: Iterator<Item = DateTime<Tz>>> Iterator for ClosedDateIterator<Tz, Iter> {
-    type Item = DateTime<Tz>;
+impl<T: Datelike + PartialOrd, Iter: Iterator<Item = T>> Iterator for ClosedDateIterator<T, Iter> {
+    type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        //this would be really cool if Option.filter() existed :)
+        // this would be really cool if Option.filter() existed :)
+        // -> exists since rust 1.27 (but chrono is on Rust 1.13?)
         self.iter
             .next()
             .and_then(|dt| if dt < self.to { Some(dt) } else { None })
     }
 }
 
-impl<Tz: TimeZone> Iterator for ClosedPairwiseDateIterator<Tz> {
-    type Item = (DateTime<Tz>, DateTime<Tz>);
+impl<Op: DateOp<T>, T: Datelike + Clone + PartialOrd> Iterator for ClosedPairwiseDateIterator<Op, T> {
+    type Item = (T, T);
 
     fn next(&mut self) -> Option<Self::Item> {
-        //this would be really cool if Option.filter() existed :)
+        // this would be really cool if Option.filter() existed :)
         self.iter
             .next()
             .and_then(|dts| if dts.0 < self.to { Some(dts) } else { None })
@@ -158,7 +153,12 @@ mod tests {
 
     use std::str::FromStr;
 
-    use ::Utc;
+    use DateTime;
+    use Utc;
+    use Duration as OldDuration;
+
+    use date_ops::*;
+    use date_ops::InvalidDateHandling::Previous;
 
     use super::*;
 
@@ -168,9 +168,10 @@ mod tests {
         let dt = DateTime::<Utc>::from_str(input).unwrap();
         assert_eq!(input, format!("{:?}", dt));
 
-        let duration = CalendarDuration::years(3) + CalendarDuration::months(1) +
-                       CalendarDuration::days(2) +
-                       CalendarDuration::minutes(4);
+        let duration = DayDuration(2).
+            and_then(OldDuration::minutes(4)).
+            and_then(YearDuration(3)).
+            and_then(MonthDuration(1, Previous));
 
         let iter = date_iterator_from(dt, duration);
         let expected = vec!["1996-12-25T16:39:57.123Z",
@@ -194,9 +195,10 @@ mod tests {
         let to_dt = DateTime::<Utc>::from_str(to_str).unwrap();
         assert_eq!(to_str, format!("{:?}", to_dt));
 
-        let duration = CalendarDuration::years(3) + CalendarDuration::months(1) +
-                       CalendarDuration::days(2) +
-                       CalendarDuration::minutes(4);
+        let duration = DayDuration(2).
+            and_then(OldDuration::minutes(4)).
+            and_then(YearDuration(3)).
+            and_then(MonthDuration(1, Previous));
 
         let iter = date_iterator_from(from_dt, duration).to(to_dt);
         let expected = vec!["1996-12-25T16:39:57.123Z",
@@ -217,9 +219,10 @@ mod tests {
         let to_dt = DateTime::<Utc>::from_str(to_str).unwrap();
         assert_eq!(to_str, format!("{:?}", to_dt));
 
-        let duration = CalendarDuration::years(3) + CalendarDuration::months(1) +
-                       CalendarDuration::days(2) +
-                       CalendarDuration::minutes(4);
+        let duration = DayDuration(2).
+            and_then(OldDuration::minutes(4)).
+            and_then(YearDuration(3)).
+            and_then(MonthDuration(1, Previous));
 
         let iter = date_iterator_from(from_dt, duration)
             .to(to_dt)

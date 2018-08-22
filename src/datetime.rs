@@ -439,6 +439,10 @@ impl<Tz: TimeZone> Datelike for DateTime<Tz> {
     fn with_ordinal0(&self, ordinal0: u32) -> Option<DateTime<Tz>> {
         map_local(self, |datetime| datetime.with_ordinal0(ordinal0))
     }
+
+    fn checked_add(self, rhs: OldDuration) -> Option<Self> {
+        self.checked_add_signed(rhs)
+    }
 }
 
 impl<Tz: TimeZone> Timelike for DateTime<Tz> {
