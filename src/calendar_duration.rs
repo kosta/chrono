@@ -1,5 +1,5 @@
-//! Exposes CalendarDuration which is like Duration but can express "a month" or "a year", which
-//! have varying time lengths
+//! Exposes CalendarDuration which is like Duration but can express "a month" or "a year", whose
+//! length can vary
 
 use std::cmp::min;
 use std::ops::{Add, Div, Mul, Neg, Sub};
@@ -187,8 +187,6 @@ pub fn add_months_dt<Tz: TimeZone>(dt: &DateTime<Tz>, months: i32) -> Option<Dat
 /// Add the `CalendarDuration` to given dt, returning None on overflow.
 /// Note that adding e.g. one month to January 30th will return February 28th.
 /// See `CalendarDuration` for more details.
-///
-/// As we cannot extend `DateTime` here, simply use a free function.
 ///
 /// TODO: In which order should these operations be applied? Here we first add the
 /// duration in seconds, then the years, then the months which seems a bit arbitrary.
